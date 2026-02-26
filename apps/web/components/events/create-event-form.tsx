@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Globe, Lock, Unlock, Edit3, Ticket, Video, MapPin, Edit2 } from "lucide-react";
+import { Globe, Lock, Megaphone, Edit3, Ticket, Video, MapPin, Edit2 } from "lucide-react";
 
 export type EventFormData = {
   title: string;
@@ -208,24 +208,28 @@ export default function CreateEventForm() {
                 onClick={() => handleVisibilityChange("Public")}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-all ${
                   formData.visibility === "Public"
-                    ? "bg-white shadow-sm border border-gray-100 text-black"
+                    ? "bg-white shadow-sm text-black"
                     : "text-gray-500 hover:text-black"
                 }`}
               >
                 Public
-                <Unlock className={`w-4 h-4 ${formData.visibility === "Public" ? "" : "opacity-50"}`} />
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${formData.visibility === "Public" ? "bg-white border border-gray-100 shadow-sm" : "bg-white border border-gray-100 shadow-sm"} `}>
+                  <Megaphone className={`w-3.5 h-3.5 ${formData.visibility === "Public" ? "text-black" : "text-gray-400"}`} />
+                </div>
               </button>
               <button
                 type="button"
                 onClick={() => handleVisibilityChange("Private")}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-all ${
                   formData.visibility === "Private"
-                    ? "bg-white shadow-sm border border-gray-100 text-black"
+                    ? "bg-white shadow-sm text-black"
                     : "text-gray-500 hover:text-black"
                 }`}
               >
                 Private
-                <Lock className={`w-4 h-4 ${formData.visibility === "Private" ? "" : "opacity-50"}`} />
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${formData.visibility === "Private" ? "bg-white border border-gray-100 shadow-sm" : "bg-white border border-gray-100 shadow-sm"} `}>
+                  <Lock className={`w-3 h-3 ${formData.visibility === "Private" ? "text-black" : "text-gray-400"}`} />
+                </div>
               </button>
             </div>
           </div>
@@ -242,7 +246,7 @@ export default function CreateEventForm() {
                 placeholder="Unlimited"
                 className="w-full text-base font-medium bg-transparent outline-none placeholder:text-gray-300"
               />
-              <div className="w-10 h-10 rounded-full bg-[#FAF9F6] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-[#FFFBEA] border border-black rounded-lg shadow-[-2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center shrink-0">
                 <Edit2 className="w-5 h-5 text-black" />
               </div>
             </div>
@@ -261,7 +265,7 @@ export default function CreateEventForm() {
               placeholder="Free"
               className="w-full text-base font-medium bg-transparent outline-none placeholder:text-gray-300"
             />
-            <div className="w-10 h-10 rounded-full bg-[#FAF9F6] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 bg-[#FFFBEA] border border-black rounded-lg shadow-[-2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center shrink-0">
               <Ticket className="w-5 h-5 text-black" />
             </div>
           </div>
@@ -274,6 +278,7 @@ export default function CreateEventForm() {
           onClick={handleClear}
           backgroundColor="bg-white"
           textColor="text-black"
+          shadowColor="transparent"
           className="w-full sm:w-auto"
         >
           Clear Event
@@ -281,12 +286,11 @@ export default function CreateEventForm() {
         <Button
           disabled={isSubmitDisabled}
           onClick={handleSubmit}
-          backgroundColor={isSubmitDisabled ? "bg-[#FFEFD3]" : "bg-[#FFD233]"}
+          backgroundColor="bg-[#FFD233]"
           textColor="text-black"
           className={`w-full sm:w-auto ${
-            isSubmitDisabled ? "opacity-60 cursor-not-allowed border-dashed focus:outline-none focus:ring-0 shadow-none hover:translate-x-0 hover:translate-y-0 active:translate-x-0 active:translate-y-0" : ""
+            isSubmitDisabled ? "opacity-50 cursor-not-allowed hover:translate-x-0 hover:translate-y-0 active:translate-x-0 active:translate-y-0" : ""
           }`}
-          style={isSubmitDisabled ? { boxShadow: "none" } : undefined}
         >
           Create Event <span className="ml-1 text-lg">↗</span>
         </Button>
