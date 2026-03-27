@@ -51,6 +51,7 @@ pub enum TicketPaymentError {
     AlreadyVoted = 52,
     VotingPeriodNotMet = 53,
     InsufficientVotes = 54,
+    ProposalExpired = 55,
 }
 
 impl core::fmt::Display for TicketPaymentError {
@@ -171,6 +172,9 @@ impl core::fmt::Display for TicketPaymentError {
             }
             TicketPaymentError::InsufficientVotes => {
                 write!(f, "Proposal does not have enough votes to execute")
+            }
+            TicketPaymentError::ProposalExpired => {
+                write!(f, "Proposal has expired")
             }
         }
     }

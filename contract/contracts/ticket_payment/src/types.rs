@@ -36,6 +36,7 @@ pub struct ParameterProposal {
     pub change: ParameterChange,
     pub status: ProposalStatus,
     pub created_at: u64,
+    pub expires_at: u64,
     pub vote_count: u32,
     pub voters: soroban_sdk::Vec<Address>,
 }

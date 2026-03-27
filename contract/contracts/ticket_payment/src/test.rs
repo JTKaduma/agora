@@ -5352,3 +5352,78 @@ fn test_partial_refund_multi_batch_index_persisted() {
         assert_eq!(balance, expected_refund);
     }
 }
+
+// ----------------------------------------------------------------------------
+// Proposal Expiry Tests
+// ----------------------------------------------------------------------------
+
+#[test]
+fn test_proposal_expiry_blocks_execute() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, admin, _, _, _) = setup_test(&env);
+    let new_token = Address::generate(&env);
+
+    let proposal_id = client.propose_parameter_change(
+        &admin,
+        &ParameterChange::AddTokenToWhitelist(new_token.clone()),
+    );
+
+    // Advance past 7-day expiry (604800s) AND past the 48h time lock
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 604801);
+
+    let result = client.try_execute_proposal(&admin, &proposal_id);
+    assert_eq!(result, Err(Ok(TicketPaymentError::ProposalExpired)));
+}
+
+#[test]
+fn test_proposal_expiry_blocks_vote() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, admin, _, _, _) = setup_test(&env);
+    let gov2 = Address::generate(&env);
+
+    // Add a second governor so we can test voting
+    let p1 = client.propose_parameter_change(&admin, &ParameterChange::AddGovernor(gov2.clone()));
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 172801);
+    client.execute_proposal(&admin, &p1);
+
+    // Create a new proposal
+    let new_token = Address::generate(&env);
+    let p2 = client.propose_parameter_change(
+        &admin,
+        &ParameterChange::AddTokenToWhitelist(new_token.clone()),
+    );
+
+    // Advance past expiry
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 604801);
+
+    let result = client.try_vote_on_proposal(&gov2, &p2);
+    assert_eq!(result, Err(Ok(TicketPaymentError::ProposalExpired)));
+}
+
+#[test]
+fn test_proposal_executes_before_expiry() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let (client, admin, _, _, _) = setup_test(&env);
+    let new_token = Address::generate(&env);
+
+    let proposal_id = client.propose_parameter_change(
+        &admin,
+        &ParameterChange::AddTokenToWhitelist(new_token.clone()),
+    );
+
+    // Advance past 48h time lock but within 7-day expiry
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 172801);
+
+    assert!(client.try_execute_proposal(&admin, &proposal_id).is_ok());
+    assert!(client.is_token_allowed(&new_token));
+}
