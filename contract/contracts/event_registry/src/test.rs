@@ -4403,6 +4403,56 @@ fn test_register_event_restocking_fee_zero_always_valid() {
 }
 
 #[test]
+fn test_register_event_restocking_fee_overflow_returns_invalid_fee_calculation() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(EventRegistry, ());
+    let client = EventRegistryClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let platform_wallet = Address::generate(&env);
+    let usdc_token = Address::generate(&env);
+    client.initialize(&admin, &platform_wallet, &500, &usdc_token);
+
+    let organizer = Address::generate(&env);
+    let mut tiers = Map::new(&env);
+    tiers.set(
+        String::from_str(&env, "general"),
+        TicketTier {
+            name: String::from_str(&env, "General"),
+            price: i128::MIN,
+            tier_limit: 50,
+            current_sold: 0,
+            is_refundable: true,
+            auction_config: soroban_sdk::vec![&env],
+        },
+    );
+
+    let result = client.try_register_event(&EventRegistrationArgs {
+        event_id: String::from_str(&env, "evt_restocking_overflow"),
+        organizer_address: organizer.clone(),
+        payment_address: test_payment_address(&env),
+        metadata_cid: String::from_str(
+            &env,
+            "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+        ),
+        max_supply: 50,
+        milestone_plan: None,
+        tiers,
+        refund_deadline: 0,
+        restocking_fee: 1,
+        resale_cap_bps: None,
+        min_sales_target: None,
+        target_deadline: None,
+        banner_cid: None,
+        tags: None,
+    });
+
+    assert_eq!(result, Err(Ok(EventRegistryError::InvalidFeeCalculation)));
+}
+
+#[test]
 fn test_restocking_fee_exceeds_ticket_price_error_message() {
     let buf = fmt_to_str(EventRegistryError::RestockingFeeExceedsTicketPrice);
     assert!(

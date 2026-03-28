@@ -240,14 +240,7 @@ impl EventRegistry {
             }
         }
 
-        // Validate restocking fee does not exceed any tier's ticket price
-        if args.restocking_fee > 0 {
-            for tier in args.tiers.values() {
-                if args.restocking_fee > tier.price {
-                    return Err(EventRegistryError::RestockingFeeExceedsTicketPrice);
-                }
-            }
-        }
+        validate_restocking_fee(&args)?;
 
         // Validate milestone plan: total release_percent must not exceed 10000 bps (100%)
         if let Some(ref milestones) = args.milestone_plan {
@@ -1763,6 +1756,29 @@ fn validate_metadata_cid(env: &Env, cid: &String) -> Result<(), EventRegistryErr
 
     if !bytes.is_empty() && bytes.get(0) != Some(b'b') {
         return Err(EventRegistryError::InvalidMetadataCid);
+    }
+
+    Ok(())
+}
+
+fn validate_restocking_fee(args: &EventRegistrationArgs) -> Result<(), EventRegistryError> {
+    if args.restocking_fee < 0 {
+        return Err(EventRegistryError::InvalidFeeCalculation);
+    }
+
+    if args.restocking_fee == 0 {
+        return Ok(());
+    }
+
+    for tier in args.tiers.values() {
+        let remaining_refund = tier
+            .price
+            .checked_sub(args.restocking_fee)
+            .ok_or(EventRegistryError::InvalidFeeCalculation)?;
+
+        if remaining_refund < 0 {
+            return Err(EventRegistryError::RestockingFeeExceedsTicketPrice);
+        }
     }
 
     Ok(())
