@@ -54,6 +54,7 @@ pub enum AgoraEvent {
     LoyaltyScoreUpdated,
     /// A custom fee override has been set for a specific event by an admin.
     CustomFeeSet,
+    AdminUpdated,
 }
 
 /// Emitted when an event is permanently cancelled.
@@ -493,5 +494,13 @@ pub struct CustomFeeSetEvent {
     /// The admin address that set the custom fee.
     pub admin_address: Address,
     /// The ledger timestamp when the custom fee was set.
+    pub timestamp: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminUpdatedEvent {
+    pub old_admin: Address,
+    pub new_admin: Address,
     pub timestamp: u64,
 }

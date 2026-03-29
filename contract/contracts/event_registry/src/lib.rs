@@ -86,13 +86,13 @@
 #![no_std]
 
 use crate::events::{
-    AgoraEvent, CollateralStakedEvent, CollateralUnstakedEvent, CustomFeeSetEvent,
-    EventArchivedEvent, EventCancelledEvent, EventPostponedEvent, EventRegisteredEvent,
-    EventStatusUpdatedEvent, EventsSuspendedEvent, FeeUpdatedEvent, GlobalPromoUpdatedEvent,
-    GoalMetEvent, InitializationEvent, InventoryIncrementedEvent, LoyaltyScoreUpdatedEvent,
-    MetadataUpdatedEvent, OrganizerBlacklistedEvent, OrganizerRemovedFromBlacklistEvent,
-    RegistryUpgradedEvent, ScannerAuthorizedEvent, StakerRewardsClaimedEvent,
-    StakerRewardsDistributedEvent,
+    AdminUpdatedEvent, AgoraEvent, CollateralStakedEvent, CollateralUnstakedEvent,
+    CustomFeeSetEvent, EventArchivedEvent, EventCancelledEvent, EventPostponedEvent,
+    EventRegisteredEvent, EventStatusUpdatedEvent, EventsSuspendedEvent, FeeUpdatedEvent,
+    GlobalPromoUpdatedEvent, GoalMetEvent, InitializationEvent, InventoryIncrementedEvent,
+    LoyaltyScoreUpdatedEvent, MetadataUpdatedEvent, OrganizerBlacklistedEvent,
+    OrganizerRemovedFromBlacklistEvent, RegistryUpgradedEvent, ScannerAuthorizedEvent,
+    StakerRewardsClaimedEvent, StakerRewardsDistributedEvent,
 };
 use crate::types::{
     BlacklistAuditEntry, EventInfo, EventReceipt, EventRegistrationArgs, EventStatus, GuestProfile,
@@ -687,6 +687,31 @@ impl EventRegistry {
     /// Returns the current administrator address.
     pub fn get_admin(env: Env) -> Result<Address, EventRegistryError> {
         storage::get_admin(&env).ok_or(EventRegistryError::NotInitialized)
+    }
+
+    /// Updates the administrator address. Only callable by the current administrator.
+    /// Emits an `AdminUpdated` event with the old and new admin addresses.
+    ///
+    /// # Arguments
+    /// * `new_admin` - The new administrator address.
+    pub fn set_admin(env: Env, new_admin: Address) -> Result<(), EventRegistryError> {
+        let old_admin = storage::get_admin(&env).ok_or(EventRegistryError::NotInitialized)?;
+        old_admin.require_auth();
+
+        validate_address(&env, &new_admin)?;
+
+        storage::set_admin(&env, &new_admin);
+
+        env.events().publish(
+            (AgoraEvent::AdminUpdated,),
+            AdminUpdatedEvent {
+                old_admin,
+                new_admin,
+                timestamp: env.ledger().timestamp(),
+            },
+        );
+
+        Ok(())
     }
 
     /// Returns the current platform wallet address.
