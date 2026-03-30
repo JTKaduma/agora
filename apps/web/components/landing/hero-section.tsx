@@ -2,9 +2,21 @@
 
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
+/**
+ * Hero section component for the landing page
+ *
+ * Features:
+ * - Full-screen hero background
+ * - Navigation bar integration
+ * - Animated content with Framer Motion
+ * - Responsive design for mobile and desktop
+ * - "Powered by Stellar" branding
+ *
+ * @returns React component that renders the main hero section
+ */
 export function HeroSection() {
   return (
     <div

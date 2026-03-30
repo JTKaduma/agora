@@ -1,15 +1,31 @@
 import Image from "next/image";
 import Link from "next/link";
 
+/**
+ * Props for the EventCard component
+ * @interface EventCardProps
+ */
 type EventCardProps = {
+  /** Unique identifier for the event */
   id: number;
+  /** Title/name of the event */
   title: string;
+  /** Formatted date string of the event */
   date: string;
+  /** Location where the event takes place */
   location: string;
+  /** Price of the event (string to support "Free" values) */
   price: string;
+  /** URL to the event's cover image */
   imageUrl: string;
 };
 
+/**
+ * EventCard component that displays event information in a card format
+ *
+ * @param props - EventCardProps containing event information
+ * @returns React component that renders a clickable event card
+ */
 export function EventCard({
   id,
   title,

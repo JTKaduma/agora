@@ -1,3 +1,24 @@
+//! # Configuration Module
+//!
+//! This module handles application configuration loaded from environment variables.
+//! It provides a centralized configuration structure with sensible defaults
+//! and validation for required settings.
+//!
+//! ## Sub-modules
+//!
+//! - [`cors`] - Cross-Origin Resource Sharing configuration
+//! - [`request_id`] - Request ID middleware configuration
+//! - [`security`] - Security headers configuration
+//!
+//! ## Environment Variables
+//!
+//! The following environment variables are supported:
+//! - `DATABASE_URL` (required) - PostgreSQL connection string
+//! - `PORT` (optional, default: 3001) - Server port
+//! - `RUST_ENV` (optional, default: development) - Environment mode
+//! - `CORS_ALLOWED_ORIGINS` (optional, default: localhost URLs) - CORS origins
+//! - `RUST_LOG` (optional, default: info) - Logging level
+
 use std::env;
 
 use crate::utils::error::AppError;
@@ -7,7 +28,7 @@ pub mod request_id;
 pub mod security;
 
 pub use cors::create_cors_layer;
-pub use request_id::{propagate_request_id_layer, set_request_id_layer};
+pub use request_id::{ propagate_request_id_layer, set_request_id_layer };
 pub use security::create_security_headers_layer;
 
 /// Application configuration loaded from environment variables.
@@ -35,18 +56,24 @@ impl Config {
     /// Returns `Result<Self, AppError>` to properly handle missing or invalid
     /// required environment variables.
     pub fn from_env() -> Result<Self, AppError> {
-        let database_url = env::var("DATABASE_URL").map_err(|_| {
-            AppError::ValidationError("DATABASE_URL environment variable is required".to_string())
-        })?;
+        let database_url = env
+            ::var("DATABASE_URL")
+            .map_err(|_| {
+                AppError::ValidationError(
+                    "DATABASE_URL environment variable is required".to_string()
+                )
+            })?;
 
-        let port = env::var("PORT")
+        let port = env
+            ::var("PORT")
             .ok()
             .and_then(|p| p.parse().ok())
             .unwrap_or(3001);
 
         let rust_env = env::var("RUST_ENV").unwrap_or_else(|_| "development".to_string());
 
-        let cors_allowed_origins = env::var("CORS_ALLOWED_ORIGINS")
+        let cors_allowed_origins = env
+            ::var("CORS_ALLOWED_ORIGINS")
             .unwrap_or_else(|_| "http://localhost:3000,http://localhost:5173".to_string());
 
         let rust_log = env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
@@ -83,16 +110,10 @@ mod tests {
         env::set_var("DATABASE_URL", "postgres://test:password@localhost/testdb");
 
         let config = Config::from_env();
-        assert!(
-            config.is_ok(),
-            "Config::from_env() should succeed with DATABASE_URL set"
-        );
+        assert!(config.is_ok(), "Config::from_env() should succeed with DATABASE_URL set");
 
         let config = config.unwrap();
-        assert_eq!(
-            config.database_url,
-            "postgres://test:password@localhost/testdb"
-        );
+        assert_eq!(config.database_url, "postgres://test:password@localhost/testdb");
         assert!(config.port > 0);
 
         // Clean up
@@ -107,10 +128,7 @@ mod tests {
         env::remove_var("DATABASE_URL");
 
         let result = Config::from_env();
-        assert!(
-            result.is_err(),
-            "Config::from_env() should fail without DATABASE_URL"
-        );
+        assert!(result.is_err(), "Config::from_env() should fail without DATABASE_URL");
 
         let err = result.unwrap_err();
         assert!(matches!(err, AppError::ValidationError(_)));
@@ -179,10 +197,7 @@ mod tests {
         env::remove_var("CORS_ALLOWED_ORIGINS");
 
         let config = Config::from_env().unwrap();
-        assert_eq!(
-            config.cors_allowed_origins,
-            "http://localhost:3000,http://localhost:5173"
-        );
+        assert_eq!(config.cors_allowed_origins, "http://localhost:3000,http://localhost:5173");
 
         env::remove_var("DATABASE_URL");
     }
@@ -195,10 +210,7 @@ mod tests {
         env::set_var("CORS_ALLOWED_ORIGINS", "http://example.com,http://test.com");
 
         let config = Config::from_env().unwrap();
-        assert_eq!(
-            config.cors_allowed_origins,
-            "http://example.com,http://test.com"
-        );
+        assert_eq!(config.cors_allowed_origins, "http://example.com,http://test.com");
 
         env::remove_var("DATABASE_URL");
         env::remove_var("CORS_ALLOWED_ORIGINS");
@@ -252,18 +264,14 @@ mod tests {
         // Test that PORT environment variable is correctly read
         temp_env::async_with_vars(
             [
-                (
-                    "DATABASE_URL",
-                    Some("postgres://test:password@localhost/testdb"),
-                ),
+                ("DATABASE_URL", Some("postgres://test:password@localhost/testdb")),
                 ("PORT", Some("8080")),
             ],
             async {
                 let config = Config::from_env().unwrap();
                 assert_eq!(config.port, 8080);
-            },
-        )
-        .await;
+            }
+        ).await;
     }
 
     #[tokio::test]
@@ -271,18 +279,14 @@ mod tests {
         // Test that default port 3001 is used when PORT is not set
         temp_env::async_with_vars(
             [
-                (
-                    "DATABASE_URL",
-                    Some("postgres://test:password@localhost/testdb"),
-                ),
+                ("DATABASE_URL", Some("postgres://test:password@localhost/testdb")),
                 ("PORT", None::<&str>),
             ],
             async {
                 let config = Config::from_env().unwrap();
                 assert_eq!(config.port, 3001);
-            },
-        )
-        .await;
+            }
+        ).await;
     }
 
     #[tokio::test]
@@ -290,18 +294,14 @@ mod tests {
         // Test that invalid port values fall back to default
         temp_env::async_with_vars(
             [
-                (
-                    "DATABASE_URL",
-                    Some("postgres://test:password@localhost/testdb"),
-                ),
+                ("DATABASE_URL", Some("postgres://test:password@localhost/testdb")),
                 ("PORT", Some("invalid")),
             ],
             async {
                 let config = Config::from_env().unwrap();
                 assert_eq!(config.port, 3001);
-            },
-        )
-        .await;
+            }
+        ).await;
     }
 
     #[tokio::test]
@@ -312,18 +312,14 @@ mod tests {
         for port in valid_ports {
             temp_env::async_with_vars(
                 [
-                    (
-                        "DATABASE_URL",
-                        Some("postgres://test:password@localhost/testdb"),
-                    ),
+                    ("DATABASE_URL", Some("postgres://test:password@localhost/testdb")),
                     ("PORT", Some(&port.to_string())),
                 ],
                 async {
                     let config = Config::from_env().unwrap();
                     assert_eq!(config.port, port);
-                },
-            )
-            .await;
+                }
+            ).await;
         }
     }
 }

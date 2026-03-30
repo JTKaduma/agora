@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
 
 // Sub-components
 import { GuestNav } from "./navbar/guest-nav";
-import { UserNav } from "./navbar/user-nav";
 import { MobileNavLink } from "./navbar/mobile-nav-link";
+import { UserNav } from "./navbar/user-nav";
 
+/**
+ * Main navigation bar component for the application
+ *
+ * Features:
+ * - Responsive design with mobile menu toggle
+ * - Different navigation states for logged-in vs guest users
+ * - Body scroll lock when mobile menu is open
+ * - Animated mobile menu using Framer Motion
+ *
+ * @returns React component that renders the main navigation bar
+ */
 export function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
