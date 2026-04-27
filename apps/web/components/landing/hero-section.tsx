@@ -68,7 +68,7 @@ export function HeroSection() {
             </Button>
           </Link>
 
-          <Link href="#pricing" className="w-full sm:w-auto">
+          <Link href="/pricing" className="w-full sm:w-auto">
             <Button
               className="w-full sm:w-[135px] h-[56px]"
               backgroundColor="bg-[#FDDA23]"
