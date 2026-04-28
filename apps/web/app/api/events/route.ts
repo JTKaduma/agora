@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createEvent, listEvents } from "@/lib/events-store";
+import { prisma } from "@/lib/prisma";
 import { getAuthFromRequest } from "@/lib/auth";
 
 const VALID_TABS = new Set(["upcoming", "hosting", "past"]);
@@ -13,27 +13,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid tab value" }, { status: 400 });
   }
 
+  const now = new Date();
+
   if (type === "my") {
     const auth = getAuthFromRequest(request);
     if (!auth?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const now = Date.now();
-    const mine = listEvents().filter((event) => event.hostEmail === auth.email);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const whereClause: any = { hostEmail: auth.email };
+    if (tab === "upcoming" || tab === "hosting") {
+      whereClause.startsAt = { gte: now };
+    } else {
+      whereClause.startsAt = { lt: now };
+    }
 
-    const items = mine.filter((event) => {
-      const startsAt = new Date(event.startsAt).getTime();
-      if (tab === "upcoming" || tab === "hosting") {
-        return startsAt >= now;
-      }
-      return startsAt < now;
+    const items = await prisma.event.findMany({
+      where: whereClause,
+      orderBy: { startsAt: "asc" },
     });
 
     return NextResponse.json({ items, tab, type: "my" });
   }
 
-  return NextResponse.json({ items: listEvents(), tab, type: type || "all" });
+  const items = await prisma.event.findMany({
+    orderBy: { startsAt: "asc" },
+  });
+
+  return NextResponse.json({ items, tab, type: type || "all" });
 }
 
 export async function POST(request: NextRequest) {
@@ -59,22 +67,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const created = createEvent(
-    {
+  const created = await prisma.event.create({
+    data: {
       title: payload.title as string,
       description: typeof payload.description === "string" ? payload.description : "",
-      startsAt: payload.startsAt as string,
+      startsAt: new Date(payload.startsAt as string),
       location: payload.location as string,
       category: payload.category as string,
       organizerName: payload.organizerName as string,
       organizerWallet: payload.organizerWallet as string,
       imageUrl: typeof payload.imageUrl === "string" ? payload.imageUrl : undefined,
-      ticketPrice: typeof payload.ticketPrice === "number" ? payload.ticketPrice : undefined,
-      totalTickets: typeof payload.totalTickets === "number" ? payload.totalTickets : undefined,
-      followersOnly: typeof payload.followersOnly === "boolean" ? payload.followersOnly : undefined,
+      ticketPrice: typeof payload.ticketPrice === "number" ? payload.ticketPrice : 0,
+      totalTickets: typeof payload.totalTickets === "number" ? payload.totalTickets : 100,
+      followersOnly: typeof payload.followersOnly === "boolean" ? payload.followersOnly : false,
+      hostEmail: auth.email,
     },
-    auth.email,
-  );
+  });
 
   return NextResponse.json({ event: created }, { status: 201 });
 }
+

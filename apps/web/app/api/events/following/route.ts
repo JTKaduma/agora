@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth";
-import { listEvents } from "@/lib/events-store";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   const auth = getAuthFromRequest(request);
@@ -8,6 +8,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const items = listEvents().filter((event) => event.followersOnly);
+  const items = await prisma.event.findMany({
+    where: { followersOnly: true },
+    orderBy: { startsAt: "asc" },
+  });
+
   return NextResponse.json({ items });
 }
+
