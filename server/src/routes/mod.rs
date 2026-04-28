@@ -30,6 +30,7 @@ use crate::config::{
     set_request_id_layer,
     Config,
 };
+use crate::middleware::request_id_tracing::trace_request_id;
 use crate::cache::RedisCache;
 use crate::handlers::{
     categories::{get_category, list_categories},
@@ -125,6 +126,7 @@ pub async fn create_routes(pool: PgPool, config: Config, redis: RedisCache) -> R
         .route("/examples/validation-error", get(example_validation_error))
         .route("/examples/empty-success", get(example_empty_success))
         .route("/examples/not-found/:id", get(example_not_found))
+        .route("/leaderboard", get(get_leaderboard))
         .with_state(pool)
         .layer(RateLimitLayer::new(GENERAL_RATE_LIMIT, GENERAL_WINDOW));
 
@@ -149,6 +151,7 @@ pub async fn create_routes(pool: PgPool, config: Config, redis: RedisCache) -> R
         .merge(deep_link_routes)
         .layer(create_security_headers_layer())
         .layer(create_cors_layer())
+        .layer(middleware::from_fn(trace_request_id))
         .layer(propagate_request_id_layer())
         .layer(set_request_id_layer())
 }
