@@ -205,6 +205,15 @@ fn get_ticket_payment_id(_env: &Env, _ticket_id: u64) -> Option<String> {
     None
 }
 
+fn get_scheduled_price(schedules: &soroban_sdk::Vec<crate::types::PriceSchedule>, current_time: u64, final_price: i128) -> i128 {
+    for s in schedules.iter() {
+        if s.valid_until > current_time {
+            return s.price;
+        }
+    }
+    final_price
+}
+
 #[contract]
 pub struct TicketPaymentContract;
 
@@ -730,7 +739,8 @@ impl TicketPaymentContract {
             }
         } else {
             // ── Exact token-price matching (existing behaviour) ───────────
-            let mut active_price = tier.price;
+            let schedules: soroban_sdk::Vec<crate::types::PriceSchedule> = soroban_sdk::Vec::new(&env);
+            let mut active_price = get_scheduled_price(&schedules, current_time, tier.price);
 
             if tier.early_bird_deadline > 0 && current_time <= tier.early_bird_deadline {
                 active_price = tier.early_bird_price;
