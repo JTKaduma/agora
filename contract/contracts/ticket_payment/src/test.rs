@@ -487,6 +487,7 @@ fn test_confirm_payment() {
         created_at: 100,
         confirmed_at: None,
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -1538,6 +1539,7 @@ fn test_transfer_ticket_success() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -1612,6 +1614,7 @@ fn test_transfer_ticket_with_fee() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -1654,6 +1657,7 @@ fn test_transfer_ticket_unauthorized() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -1997,6 +2001,7 @@ fn test_bulk_refund_success() {
                     created_at: 0,
                     confirmed_at: Some(1),
                     refunded_amount: 0,
+                    last_checked_in_at: 0,
                 },
             );
             update_event_balance(&env, event_id.clone(), 950_0000000, 50_0000000);
@@ -2074,6 +2079,7 @@ fn test_bulk_refund_batching() {
                     created_at: 0,
                     confirmed_at: Some(1),
                     refunded_amount: 0,
+                    last_checked_in_at: 0,
                 },
             );
             update_event_balance(&env, event_id.clone(), 950_0000000, 50_0000000);
@@ -3149,6 +3155,7 @@ fn test_transfer_ticket_resale_price_within_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -3192,6 +3199,7 @@ fn test_transfer_ticket_resale_price_exceeds_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -3237,6 +3245,7 @@ fn test_transfer_ticket_no_sale_price_with_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -3280,6 +3289,7 @@ fn test_transfer_ticket_sale_price_no_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -3767,6 +3777,7 @@ fn test_claim_automatic_refund_success() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
 
     env.as_contract(&client.address, || {
@@ -6721,6 +6732,7 @@ fn insert_confirmed_payment(
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        last_checked_in_at: 0,
     };
     env.as_contract(client_address, || {
         store_payment(env, payment.clone());
