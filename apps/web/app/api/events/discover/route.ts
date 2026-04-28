@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/api-handler";
 
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const events = await prisma.event.findMany();
 
   const categories = Array.from(
@@ -40,5 +41,6 @@ export async function GET() {
   ).map(([, value]) => value);
 
   return NextResponse.json({ categories, popularEvents, organizers });
-}
+});
+
 
