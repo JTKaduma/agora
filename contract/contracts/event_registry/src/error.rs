@@ -1,8 +1,7 @@
 use soroban_sdk::contracterror;
 
 #[contracterror]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(u32)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum EventRegistryError {
     EventAlreadyExists = 1,
     EventNotFound = 2,
@@ -35,62 +34,50 @@ pub enum EventRegistryError {
     AlreadyStaked = 26,
     /// Organizer does not have an active stake
     NotStaked = 27,
-    /// Stake amount is below the minimum required for Verified status
-    InsufficientStakeAmount = 28,
-    /// Stake amount must be greater than zero
-    InvalidStakeAmount = 29,
-    /// Staking has not been configured by the admin
-    StakingNotConfigured = 30,
-    /// No rewards available to claim
-    NoRewardsAvailable = 31,
-    /// Reward distribution total must be positive
-    InvalidRewardAmount = 32,
-    /// Milestone release percentages sum exceeds 100%
-    InvalidMilestonePlan = 41,
-    /// Restocking fee exceeds the ticket price
-    RestockingFeeExceedsTicketPrice = 42,
-    /// Tags list is invalid (too many tags or a tag string is too long)
-    InvalidTags = 43,
-    // ── Governance / Multi-Sig errors ──────────────────────────────────
-    /// Admin already exists in the multi-sig configuration
-    AdminAlreadyExists = 33,
-    /// Admin not found in the multi-sig configuration
-    AdminNotFound = 34,
-    /// Cannot remove the last admin
-    CannotRemoveLastAdmin = 35,
-    /// Invalid threshold value
-    InvalidThreshold = 36,
-    /// Proposal not found
-    ProposalNotFound = 37,
-    /// Proposal has already been executed
-    ProposalAlreadyExecuted = 38,
-    /// Proposal has expired
-    ProposalExpired = 39,
-    /// Insufficient approvals to execute proposal
-    InsufficientApprovals = 40,
-    /// Target deadline must be in the future
-    InvalidTargetDeadline = 44,
-    /// Admin has already approved this proposal
-    AlreadyApproved = 45,
-    /// Event has not ended yet; feedback CID can only be set after end_time
-    EventNotEnded = 47,
-    /// User has exceeded the maximum number of tickets allowed for this tier
-    PerUserLimitExceeded = 48,
-    /// Proposal has already been cancelled
-    ProposalAlreadyCancelled = 49,
-    /// refund_deadline or target_deadline must be before end_time when end_time is set
-    DeadlineAfterEndTime = 50,
-    /// Event is currently paused and does not accept tickets sales
-    EventPaused = 51,
-    /// Event is already in the requested state (pause/resume)
-    NoStateChange = 52,
+    NoRewardsAvailable = 28,
+    InvalidMilestonePlan = 29,
+    ProposalExpired = 30,
+    RestockingFeeExceedsTicketPrice = 31,
+    InvalidTags = 35,
+    PerUserLimitExceeded = 38,
+    EventNotEnded = 39,
+    EventCancelledInternal = 40, // Avoid conflict with EventCancelled = 22
+    EventNotFoundInternal = 41, // Avoid conflict with EventNotFound = 2
+    TierNotFoundInternal = 42, // Avoid conflict with TierNotFound = 14
+    AlreadyStakedInternal = 43, // Avoid conflict with AlreadyStaked = 26
+    EventAlreadyExistsInternal = 44, // Avoid conflict with EventAlreadyExists = 1
+    
+    // Additional variants from feature branch
+    LimitExceeded = 47,
+    StateError = 48,
+    AlreadyExists = 49,
+    InvalidDeadline = 50,
+    SupplyExceeded = 51,
+    MultisigError = 52,
+    AlreadyExecuted = 53,
+    InvalidTargetDeadline = 54,
+    DeadlineAfterEndTime = 55,
+    InsufficientStakeAmount = 56,
+    InvalidRewardAmount = 57,
+    StakingNotConfigured = 58,
+    AdminAlreadyExists = 59,
+    AdminNotFound = 60,
+    CannotRemoveLastAdmin = 61,
+    InvalidThreshold = 62,
+    ProposalNotFound = 63,
+    ProposalAlreadyExecuted = 64,
+    InsufficientApprovals = 65,
+    AlreadyApproved = 66,
+    ProposalAlreadyCancelled = 67,
+    EventPaused = 68,
+    NoStateChange = 69,
 }
 
 impl core::fmt::Display for EventRegistryError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            EventRegistryError::EventAlreadyExists => write!(f, "Event already exists"),
-            EventRegistryError::EventNotFound => write!(f, "Event not found"),
+            EventRegistryError::EventAlreadyExists | EventRegistryError::EventAlreadyExistsInternal => write!(f, "Event already exists"),
+            EventRegistryError::EventNotFound | EventRegistryError::EventNotFoundInternal => write!(f, "Event not found"),
             EventRegistryError::Unauthorized => write!(f, "Caller not authorized for action"),
             EventRegistryError::InvalidAddress => write!(f, "Invalid Stellar address"),
             EventRegistryError::InvalidFeePercent => {
@@ -117,7 +104,7 @@ impl core::fmt::Display for EventRegistryError {
             EventRegistryError::TierLimitExceedsMaxSupply => {
                 write!(f, "Sum of tier limits exceeds event max supply")
             }
-            EventRegistryError::TierNotFound => {
+            EventRegistryError::TierNotFound | EventRegistryError::TierNotFoundInternal => {
                 write!(
                     f,
                     "The specified ticket tier ID does not exist for this event"
@@ -147,7 +134,7 @@ impl core::fmt::Display for EventRegistryError {
             EventRegistryError::InvalidPromoBps => {
                 write!(f, "Promo discount must be between 0 and 10000 basis points")
             }
-            EventRegistryError::EventCancelled => {
+            EventRegistryError::EventCancelled | EventRegistryError::EventCancelledInternal => {
                 write!(f, "The event has been cancelled")
             }
             EventRegistryError::EventAlreadyCancelled => {
@@ -159,7 +146,7 @@ impl core::fmt::Display for EventRegistryError {
             EventRegistryError::EventIsActive => {
                 write!(f, "Cannot perform action on an active event")
             }
-            EventRegistryError::AlreadyStaked => {
+            EventRegistryError::AlreadyStaked | EventRegistryError::AlreadyStakedInternal => {
                 write!(f, "Organizer already has an active stake")
             }
             EventRegistryError::NotStaked => {
@@ -255,6 +242,7 @@ impl core::fmt::Display for EventRegistryError {
             EventRegistryError::NoStateChange => {
                 write!(f, "Event is already in the requested state")
             }
+            _ => write!(f, "{:?}", self),
         }
     }
 }
