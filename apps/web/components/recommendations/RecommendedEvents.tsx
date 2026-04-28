@@ -194,7 +194,7 @@ export default function RecommendedEvents({
           {personalised && basedOnCategories.length > 0 && (
             <p className="mt-1 text-sm text-neutral-500">
               Based on your interest in{" "}
-              {basedOnCategories.map((cat, i) => (
+              {basedOnCategories.map((cat: string, i: number) => (
                 <span key={cat}>
                   <span className="font-medium text-violet-600">{cat}</span>
                   {i < basedOnCategories.length - 1 ? ", " : ""}
