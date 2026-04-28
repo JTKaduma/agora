@@ -523,6 +523,7 @@ fn test_confirm_payment() {
         created_at: 100,
         confirmed_at: None,
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -1625,6 +1626,7 @@ fn test_transfer_ticket_success() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -1649,6 +1651,43 @@ fn test_transfer_ticket_success() {
     let new_owner_payments = client.get_buyer_payments(&new_owner);
     assert_eq!(new_owner_payments.len(), 1);
     assert_eq!(new_owner_payments.get(0).unwrap(), payment_id);
+}
+
+#[test]
+fn test_transfer_ticket_rejects_soulbound_ticket() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, _admin, _usdc_id, _, _) = setup_test(&env);
+    let buyer = Address::generate(&env);
+    let new_owner = Address::generate(&env);
+    let payment_id = String::from_str(&env, "pay_soulbound");
+
+    let payment = Payment {
+        payment_id: payment_id.clone(),
+        event_id: String::from_str(&env, "event_1"),
+        buyer_address: buyer.clone(),
+        ticket_tier_id: String::from_str(&env, "t1"),
+        amount: 1000,
+        platform_fee: 50,
+        organizer_amount: 950,
+        status: PaymentStatus::Confirmed,
+        transaction_hash: String::from_str(&env, "tx_sb"),
+        created_at: 100,
+        confirmed_at: Some(101),
+        refunded_amount: 0,
+        is_soulbound: true,
+        last_checked_in_at: 0,
+    };
+
+    env.as_contract(&client.address, || {
+        store_payment(&env, payment);
+    });
+
+    let result = client.try_transfer_ticket(&payment_id, &new_owner, &None);
+    assert_eq!(result, Err(Ok(TicketPaymentError::NonTransferable)));
+
+    let unchanged = client.get_payment_status(&payment_id).unwrap();
+    assert_eq!(unchanged.buyer_address, buyer);
 }
 
 #[test]
@@ -1700,6 +1739,7 @@ fn test_transfer_ticket_with_fee() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -1743,6 +1783,7 @@ fn test_transfer_ticket_unauthorized() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -2108,6 +2149,7 @@ fn test_bulk_refund_success() {
                     created_at: 0,
                     confirmed_at: Some(1),
                     refunded_amount: 0,
+                    is_soulbound: false,
                     last_checked_in_at: 0,
                 },
             );
@@ -2186,6 +2228,7 @@ fn test_bulk_refund_batching() {
                     created_at: 0,
                     confirmed_at: Some(1),
                     refunded_amount: 0,
+                    is_soulbound: false,
                     last_checked_in_at: 0,
                 },
             );
@@ -2417,6 +2460,7 @@ fn test_add_discount_hashes_and_invalid_code_rejected() {
         &1,
         &Some(wrong_preimage),
         &None,
+        &hash,
     );
 
     assert_eq!(res, Err(Ok(TicketPaymentError::InvalidDiscountCode)));
@@ -2494,6 +2538,7 @@ fn test_process_payment_with_valid_discount_code() {
         &1,
         &Some(preimage),
         &None,
+        &hash,
     );
     assert_eq!(result, String::from_str(&env, "pay_1"));
 
@@ -2531,6 +2576,7 @@ fn test_discount_code_one_time_use() {
         &1,
         &Some(Bytes::from_slice(&env, b"ONCE_ONLY")),
         &None,
+        &hash,
     );
 
     let (_secret, hash) = test_secret(&env);
@@ -2544,6 +2590,7 @@ fn test_discount_code_one_time_use() {
         &1,
         &Some(Bytes::from_slice(&env, b"ONCE_ONLY")),
         &None,
+        &hash,
     );
     assert_eq!(res, Err(Ok(TicketPaymentError::DiscountCodeUsed)));
 }
@@ -2859,6 +2906,7 @@ fn test_integration_full_platform_day() {
             &1,
             &None,
             &None,
+            &hash,
         );
     }
 
@@ -3078,7 +3126,7 @@ fn test_integration_concurrent_multi_guest_sales_no_state_corruption() {
         };
         let (_secret, hash) = test_secret(&env);
         let res = payment_client.try_process_payment(
-            &pid, &event_id, &tier_id, &buyer, &usdc_id, &amount, &1, &None, &None,
+            &pid, &event_id, &tier_id, &buyer, &usdc_id, &amount, &1, &None, &None, &hash,
         );
 
         if res.is_ok() {
@@ -3309,6 +3357,7 @@ fn test_transfer_ticket_resale_price_within_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -3353,6 +3402,7 @@ fn test_transfer_ticket_resale_price_exceeds_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -3399,6 +3449,7 @@ fn test_transfer_ticket_no_sale_price_with_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -3443,6 +3494,7 @@ fn test_transfer_ticket_sale_price_no_cap() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -3946,6 +3998,7 @@ fn test_claim_automatic_refund_success() {
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
 
@@ -6037,6 +6090,7 @@ fn test_partial_refund_multi_batch_index_persisted() {
             &1,
             &None,
             &None,
+            &hash,
         );
         client.confirm_payment(pid, &String::from_str(&env, "h"));
         buyers.push_back(buyer);
@@ -6574,6 +6628,7 @@ fn test_referral_reward_is_20_percent_of_platform_fee() {
         &1,
         &None,
         &Some(referrer.clone()),
+        &hash,
     );
 
     // platform_fee = 1000 * 5% = 50 USDC
@@ -6637,6 +6692,7 @@ fn test_referral_reward_capped_when_platform_fee_is_zero() {
         &1,
         &None,
         &Some(referrer.clone()),
+        &hash,
     );
 
     let escrow = client.get_event_escrow_balance(&String::from_str(&env, "event_1"));
@@ -6687,6 +6743,7 @@ fn test_referral_reward_does_not_exceed_platform_fee_invariant() {
         &1,
         &None,
         &Some(referrer.clone()),
+        &hash,
     );
 
     // platform_fee = 1000 * 5% = 50
@@ -6753,6 +6810,7 @@ fn setup_withdrawal_cap_test(
             &1,
             &None,
             &None,
+            &hash,
         );
     }
 
@@ -6994,6 +7052,7 @@ fn test_no_referral_reward_without_referrer() {
         &1,
         &None,
         &None, // no referrer
+        &hash,
     );
 
     // Full platform fee stays in escrow
@@ -7025,6 +7084,7 @@ fn insert_confirmed_payment(
         created_at: 100,
         confirmed_at: Some(101),
         refunded_amount: 0,
+        is_soulbound: false,
         last_checked_in_at: 0,
     };
     env.as_contract(client_address, || {

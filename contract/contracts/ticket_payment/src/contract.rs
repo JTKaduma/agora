@@ -844,6 +844,7 @@ impl TicketPaymentContract {
                 created_at,
                 confirmed_at: None,
                 refunded_amount: 0,
+                is_soulbound: false,
                 last_checked_in_at: 0,
             };
 
@@ -1325,16 +1326,6 @@ impl TicketPaymentContract {
 
         let registry_client = event_registry::Client::new(&env, &get_event_registry(&env));
 
-        // Allow organizer OR an authorized scanner
-        let organizer = registry_client
-            .get_organizer_address(&payment.event_id)
-            .ok_or(TicketPaymentError::EventNotFound)?;
-        let is_organizer = scanner == organizer;
-        let is_scanner = registry_client.is_scanner_authorized(&payment.event_id, &scanner);
-        if !is_organizer && !is_scanner {
-            return Err(TicketPaymentError::UnauthorizedScanner);
-        }
-
         // Check if the event has ended (prevent check-ins after end_time)
         let event_info = registry_client
             .try_get_event(&payment.event_id)
@@ -1343,13 +1334,20 @@ impl TicketPaymentContract {
             .flatten()
             .ok_or(TicketPaymentError::EventNotFound)?;
 
+        // Allow organizer OR an authorized scanner.
+        let is_organizer = scanner == event_info.organizer_address;
+        let is_scanner = registry_client.is_scanner_authorized(&payment.event_id, &scanner);
+        if !is_organizer && !is_scanner {
+            return Err(TicketPaymentError::UnauthorizedScanner);
+        }
+
         let current_time = env.ledger().timestamp();
         if event_info.end_time > 0 && current_time > event_info.end_time {
             return Err(TicketPaymentError::EventEnded);
         }
 
         payment.status = PaymentStatus::CheckedIn;
-        payment.last_checked_in_at = now;
+        payment.last_checked_in_at = current_time;
         store_payment(&env, payment.clone());
 
         #[allow(deprecated)]
@@ -1358,9 +1356,9 @@ impl TicketPaymentContract {
             TicketCheckedInEvent {
                 payment_id,
                 event_id: payment.event_id,
-                attendee,
+                attendee: payment.buyer_address,
                 scanner,
-                timestamp: now,
+                timestamp: current_time,
             },
         );
 
@@ -1767,6 +1765,10 @@ impl TicketPaymentContract {
 
         if payment.status != PaymentStatus::Confirmed {
             return Err(TicketPaymentError::InvalidPaymentStatus);
+        }
+
+        if payment.is_soulbound {
+            return Err(TicketPaymentError::NonTransferable);
         }
 
         let from = payment.buyer_address.clone();
@@ -2334,6 +2336,7 @@ impl TicketPaymentContract {
             created_at: env.ledger().timestamp(),
             confirmed_at: Some(env.ledger().timestamp()),
             refunded_amount: 0,
+            is_soulbound: false,
             last_checked_in_at: 0,
         };
         store_payment(&env, payment);
@@ -2494,7 +2497,11 @@ impl TicketPaymentContract {
         // Return ticket to inventory
         let event_registry_addr = get_event_registry(&env);
         let registry_client = event_registry::Client::new(&env, &event_registry_addr);
-        registry_client.decrement_inventory(&payment.event_id, &payment.ticket_tier_id);
+        registry_client.decrement_inventory(
+            &payment.event_id,
+            &payment.ticket_tier_id,
+            &payment.buyer_address,
+        );
 
         // Transfer full amount back to buyer
         let token_address = crate::storage::get_usdc_token(&env);
