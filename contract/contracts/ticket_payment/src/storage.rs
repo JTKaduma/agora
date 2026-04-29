@@ -1,8 +1,10 @@
 use crate::{
     error::TicketPaymentError,
-    types::{DataKey, EventBalance, HighestBid, ParameterProposal, Payment, PaymentStatus},
+    types::{
+        DataKey, DiscountData, EventBalance, HighestBid, ParameterProposal, Payment, PaymentStatus,
+    },
 };
-use soroban_sdk::{vec, Address, Env, String, Vec};
+use soroban_sdk::{vec, Address, Bytes, BytesN, Env, String, Vec};
 
 const SHARD_SIZE: u32 = 100;
 
@@ -582,6 +584,19 @@ pub fn set_event_dispute_status(env: &Env, event_id: String, disputed: bool) {
         .set(&DataKey::DisputeStatus(event_id), &disputed);
 }
 
+pub fn is_event_cancelled_for_refund(env: &Env, event_id: &String) -> bool {
+    env.storage()
+        .persistent()
+        .get(&DataKey::EventCancelledForRefund(event_id.clone()))
+        .unwrap_or(false)
+}
+
+pub fn set_event_cancelled_for_refund(env: &Env, event_id: &String) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::EventCancelledForRefund(event_id.clone()), &true);
+}
+
 // ── Oracle configuration ──────────────────────────────────────────────────────
 
 pub fn set_oracle_address(env: &Env, address: &Address) {
@@ -798,4 +813,61 @@ pub fn get_payments_by_status(env: &Env, event_id: String, status: PaymentStatus
         .persistent()
         .get(&DataKey::EventPaymentStatus(event_id, status))
         .unwrap_or_else(|| vec![env])
+}
+
+/// Stores the SHA-256 hash of the ticket secret for a payment.
+pub fn store_validation_hash(env: &Env, payment_id: &String, hash: &BytesN<32>) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::ValidationHash(payment_id.clone()), hash);
+}
+
+/// Retrieves the stored validation hash for a payment.
+pub fn get_validation_hash(env: &Env, payment_id: &String) -> Option<BytesN<32>> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::ValidationHash(payment_id.clone()))
+}
+
+/// Verifies that `raw_secret` hashes to the stored validation hash.
+pub fn verify_secret(env: &Env, payment_id: &String, raw_secret: &Bytes) -> bool {
+    match get_validation_hash(env, payment_id) {
+        Some(stored_hash) => {
+            let computed: BytesN<32> = env.crypto().sha256(raw_secret).into();
+            computed == stored_hash
+        }
+        None => false,
+    }
+}
+
+// ── Per-event discount codes ──────────────────────────────────────────────────
+
+pub fn set_discount_code(env: &Env, event_id: String, code: String, data: &DiscountData) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::DiscountCode(event_id, code), data);
+}
+
+pub fn get_discount_code(env: &Env, event_id: &String, code: &String) -> Option<DiscountData> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::DiscountCode(event_id.clone(), code.clone()))
+}
+
+// ── Affiliate commission rates ────────────────────────────────────────────────
+
+/// Sets a per-event affiliate commission rate in basis points.
+/// Only rates in [1, 10000] are meaningful; 0 means "use default".
+pub fn set_affiliate_rate(env: &Env, event_id: String, affiliate: &Address, rate_bps: u32) {
+    env.storage().persistent().set(
+        &DataKey::AffiliateRate(event_id, affiliate.clone()),
+        &rate_bps,
+    );
+}
+
+/// Returns the affiliate-specific commission rate for (event_id, affiliate), if set.
+pub fn get_affiliate_rate(env: &Env, event_id: &String, affiliate: &Address) -> Option<u32> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::AffiliateRate(event_id.clone(), affiliate.clone()))
 }
