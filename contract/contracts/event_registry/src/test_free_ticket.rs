@@ -92,6 +92,7 @@ fn register_free_event(
         transfer_lock_duration: 0,
         accepted_tokens: soroban_sdk::Vec::new(env),
         use_global_whitelist: true,
+        category_ids: None,
     });
     id
 }
@@ -213,7 +214,7 @@ fn test_free_ticket_respects_tier_limit() {
 
     // Third ticket must be rejected
     let result = client.try_increment_inventory(&event_id, &tier_id, &Address::generate(&env), &1);
-    assert_eq!(result, Err(Ok(EventRegistryError::TierSupplyExceeded)));
+    assert_eq!(result, Err(Ok(EventRegistryError::TierSoldOut)));
 }
 
 /// max_supply cap is enforced for free tickets when set.

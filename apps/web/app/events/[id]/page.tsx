@@ -33,7 +33,6 @@ export default function EventDetailPage({
     notFound();
   }
 
-  const isFree = event.price.toLowerCase() === "free";
 
   // Mock host data matching Figma
   const host = {
@@ -146,7 +145,7 @@ export default function EventDetailPage({
             </div>
 
             {/* Registration Box */}
-            <RegistrationBox isFree={isFree} price={event.price} host={host} />
+            <RegistrationBox event={event} host={host} />
 
             {/* About Section */}
             <div className="flex flex-col gap-6 pt-4">

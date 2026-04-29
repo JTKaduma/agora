@@ -802,6 +802,37 @@ pub fn set_organizer_stake(env: &Env, stake: &OrganizerStake) {
         .set(&DataKey::OrganizerStake(stake.organizer.clone()), stake);
 }
 
+/// Sets the contract administrator address for organizer whitelisting.
+pub fn set_contract_admin(env: &Env, admin: &Address) {
+    env.storage().instance().set(&DataKey::ContractAdmin, admin);
+}
+
+/// Retrieves the contract administrator address for organizer whitelisting.
+pub fn get_contract_admin(env: &Env) -> Option<Address> {
+    env.storage().instance().get(&DataKey::ContractAdmin)
+}
+
+/// Approves or removes an organizer from the whitelist.
+pub fn set_approved_organizer(env: &Env, organizer: &Address, approved: bool) {
+    if approved {
+        env.storage()
+            .instance()
+            .set(&DataKey::ApprovedOrganizer(organizer.clone()), &true);
+    } else {
+        env.storage()
+            .instance()
+            .remove(&DataKey::ApprovedOrganizer(organizer.clone()));
+    }
+}
+
+/// Checks if an organizer is approved.
+pub fn is_approved_organizer(env: &Env, addr: &Address) -> bool {
+    env.storage()
+        .instance()
+        .get(&DataKey::ApprovedOrganizer(addr.clone()))
+        .unwrap_or(false)
+}
+
 /// Removes an organizer's stake record (used on unstake).
 pub fn remove_organizer_stake(env: &Env, organizer: &Address) {
     env.storage()
@@ -1098,4 +1129,66 @@ pub fn subtract_from_user_ticket_count(
         user,
         current.saturating_sub(quantity),
     );
+}
+
+// ── Waitlist Storage ──────────────────────────────────────────────────────────
+
+/// Check if a user is already on the waitlist for an event.
+/// Storage key: DataKey::Waitlist(event_id, user). Storage type: Persistent
+pub fn is_on_waitlist(env: &Env, event_id: &String, user: &Address) -> bool {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Waitlist(event_id.clone(), user.clone()))
+        .unwrap_or(false)
+}
+
+/// Add a user to the waitlist for an event.
+/// Storage key: DataKey::Waitlist(event_id, user) -> true. Storage type: Persistent
+pub fn add_to_waitlist(env: &Env, event_id: &String, user: &Address) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Waitlist(event_id.clone(), user.clone()), &true);
+}
+
+// ── Event Pause Storage ────────────────────────────────────────────────────────
+
+/// Returns whether an event is paused. Returns false if the pause status is not set (i.e., event is not paused).
+/// Storage key: DataKey::EventPaused(event_id). Storage type: Persistent
+pub fn is_event_paused(env: &Env, event_id: &String) -> bool {
+    env.storage()
+        .persistent()
+        .get::<_, bool>(&DataKey::EventPaused(event_id.clone()))
+        .unwrap_or(false)
+}
+
+/// Sets the pause status for an event.
+/// Storage key: DataKey::EventPaused(event_id). Storage type: Persistent
+pub fn set_event_paused(env: &Env, event_id: &String, is_paused: bool) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::EventPaused(event_id.clone()), &is_paused);
+}
+
+// ── Category Index Storage ─────────────────────────────────────────────────────
+
+/// Appends `event_id` to the index list for `category_id`.
+/// Storage key: DataKey::CategoryEvents(category_id). Storage type: Persistent
+pub fn index_event_category(env: &Env, category_id: u32, event_id: String) {
+    let key = DataKey::CategoryEvents(category_id);
+    let mut ids: Vec<String> = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or_else(|| vec![env]);
+    ids.push_back(event_id);
+    env.storage().persistent().set(&key, &ids);
+}
+
+/// Returns all event IDs tagged with `category_id`.
+/// Storage key: DataKey::CategoryEvents(category_id). Storage type: Persistent
+pub fn get_events_by_category(env: &Env, category_id: u32) -> Vec<String> {
+    env.storage()
+        .persistent()
+        .get(&DataKey::CategoryEvents(category_id))
+        .unwrap_or_else(|| vec![env])
 }
