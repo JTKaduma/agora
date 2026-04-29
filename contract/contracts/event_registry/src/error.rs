@@ -180,21 +180,6 @@ impl core::fmt::Display for EventRegistryError {
             EventRegistryError::ProposalAlreadyCancelled => {
                 write!(f, "Proposal has already been cancelled")
             }
-            EventRegistryError::ProposalAlreadyExecuted => {
-                write!(f, "Proposal has already been executed")
-            }
-            EventRegistryError::PerUserLimitExceeded => write!(
-                f,
-                "User has exceeded the maximum number of tickets allowed for this tier"
-            ),
-            EventRegistryError::EventNotEnded => write!(
-                f,
-                "Event has not ended yet; feedback CID can only be set after end_time"
-            ),
-            EventRegistryError::DeadlineAfterEndTime => write!(
-                f,
-                "refund_deadline and target_deadline must be before end_time"
-            ),
             EventRegistryError::AlreadyOnWaitlist => {
                 write!(f, "User is already on the waitlist for this event")
             }
