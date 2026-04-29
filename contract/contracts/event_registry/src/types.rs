@@ -163,6 +163,8 @@ pub struct EventInfo {
     pub feedback_cid: Option<String>,
     /// Optional human-readable reason provided when the event was cancelled
     pub cancellation_reason: Option<String>,
+    /// Referral commission rate in basis points (e.g., 500 = 5%)
+    pub referral_rate_bps: u32,
 }
 
 /// Payment information for an event
@@ -177,6 +179,8 @@ pub struct PaymentInfo {
     pub custom_fee_bps: Option<u32>,
     /// Map of tier_id to TicketTier for multi-tiered pricing
     pub tiers: Map<String, TicketTier>,
+    /// Referral commission rate in basis points
+    pub referral_rate_bps: u32,
 }
 
 /// Arguments required to register a new event
@@ -216,6 +220,8 @@ pub struct EventRegistrationArgs {
     pub accepted_tokens: Vec<Address>,
     /// Whether to use the global token whitelist instead of event-specific one
     pub use_global_whitelist: bool,
+    /// Referral commission rate in basis points (optional)
+    pub referral_rate_bps: Option<u32>,
 }
 
 /// Audit log entry for blacklist actions

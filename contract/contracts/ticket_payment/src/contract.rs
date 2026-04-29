@@ -79,6 +79,7 @@ pub mod event_registry {
         pub payment_address: Address,
         pub platform_fee_percent: u32,
         pub custom_fee_bps: Option<u32>,
+        pub referral_rate_bps: u32,
     }
 
     #[soroban_sdk::contracttype]
@@ -180,6 +181,7 @@ pub mod event_registry {
         pub end_time: u64,
         pub accepted_tokens: soroban_sdk::Vec<Address>,
         pub use_global_whitelist: bool,
+        pub referral_rate_bps: u32,
     }
 }
 
@@ -801,20 +803,22 @@ impl TicketPaymentContract {
             .checked_sub(total_platform_fee)
             .ok_or(TicketPaymentError::ArithmeticError)?;
 
-        let referral_reward = if options.referrer.is_some() {
-            let reward = total_platform_fee
-                .checked_mul(20)
-                .and_then(|v| v.checked_div(100))
-                .ok_or(TicketPaymentError::ArithmeticError)?; // 20%
-                                                              // Cap: referral reward must never exceed the remaining platform fee.
-            let reward = core::cmp::min(reward, total_platform_fee);
-            total_platform_fee = total_platform_fee
-                .checked_sub(reward)
+        let referral_reward = if referrer.is_some() {
+            let reward = effective_total
+                .checked_mul(event_info.referral_rate_bps as i128)
+                .and_then(|v| v.checked_div(MAX_BPS as i128))
                 .ok_or(TicketPaymentError::ArithmeticError)?;
+
+            // Cap: referral reward must never exceed the remaining organizer amount
+            let reward = core::cmp::min(reward, total_organizer_amount);
             reward
         } else {
             0
         };
+
+        let total_organizer_amount = total_organizer_amount
+            .checked_sub(referral_reward)
+            .ok_or(TicketPaymentError::ArithmeticError)?;
 
         // 3. Transfer tokens to contract (escrow)
         let token_client = token::Client::new(&env, &token_address);
@@ -882,6 +886,9 @@ impl TicketPaymentContract {
         let organizer_amount_per_ticket = total_organizer_amount
             .checked_div(quantity_i128)
             .ok_or(TicketPaymentError::ArithmeticError)?;
+        let referral_amount_per_ticket = referral_reward
+            .checked_div(quantity_i128)
+            .ok_or(TicketPaymentError::ArithmeticError)?;
         let created_at = env.ledger().timestamp();
         let empty_tx_hash = String::from_str(&env, "");
 
@@ -917,6 +924,8 @@ impl TicketPaymentContract {
                 refunded_amount: 0,
                 is_soulbound: false,
                 last_checked_in_at: 0,
+                referral_amount: referral_amount_per_ticket,
+                referrer: referrer.clone(),
             };
 
             store_payment(&env, payment);

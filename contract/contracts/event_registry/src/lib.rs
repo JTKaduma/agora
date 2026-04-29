@@ -452,6 +452,7 @@ impl EventRegistry {
             use_global_whitelist: args.use_global_whitelist,
             feedback_cid: None,
             cancellation_reason: None,
+            referral_rate_bps: args.referral_rate_bps.unwrap_or(0),
         };
 
         storage::store_event(&env, event_info);
@@ -484,6 +485,7 @@ impl EventRegistry {
                     platform_fee_percent: event_info.platform_fee_percent,
                     custom_fee_bps: event_info.custom_fee_bps,
                     tiers: event_info.tiers,
+                    referral_rate_bps: event_info.referral_rate_bps,
                 })
             }
             None => Err(EventRegistryError::EventNotFound),
